@@ -75,17 +75,33 @@ Docker Compose v5.6.1 (SHA256 сверена с release asset digest). Его р
 в compose.yaml добавлено явное `name: durable-generation`, повторная валидация прошла.
 Команда standalone `up --build --wait` подтвердила отсутствие Docker Engine:
 `failed to connect ... npipe:////./pipe/docker_engine ... The system cannot find the file specified`.
-Локальная сборка контейнера и запуск Compose **не подтверждены**. В CI предусмотрен job `compose`
-для настоящей сборки, всех PostgreSQL-тестов и HTTP smoke на Ubuntu.
+Локальная сборка контейнера и запуск Compose на этой Windows-машине не проверялись.
+Контейнерный запуск **подтверждён на Ubuntu в GitHub Actions**, как описано ниже.
 
-CI в GitHub имеет два job: локальный Linux-стек с PostgreSQL и Docker Compose.
-Наличие workflow само по себе не означает, что CI прошёл. Состояние удалённого
-запуска, если он доступен, сообщается отдельно в итоговом ответе.
+## Подтверждённые результаты GitHub Actions
+
+При финальном аудите получены статусы job и их фактические логи для
+[запуска 39796242372](https://github.com/EminSans1/durable-generation-service/actions/runs/39796242372).
+Оба job проверяли коммит `4007238121088c857cc479881693f619a25aa191`, что подтверждается
+checkout SHA в каждом логе:
+
+| Job | Результат | Подтверждённые проверки |
+|---|---|---|
+| `test` (119884111691) | completed / success | Миграции, Alembic check, Ruff, форматирование, **54 passed**, локальный HTTP smoke |
+| `compose` (119884048298) | completed / success | Docker build, Compose up с healthchecks, миграции, **54 passed** внутри контейнера, HTTP smoke, Compose down |
+
+В Docker smoke получены четыре API PID: **8, 9, 10, 11**. Итоговый баланс — 92.
+В Linux smoke job `test` получены PID **2881, 2882, 2883, 2884**, баланс — 92.
+Тем самым сборка и запуск контейнеров, оба провайдера, подписанные callback,
+fallback, send_timeout, watchdog и финансовый результат проверены в реальном стеке.
+
+Последующее обновление README и отчётов фиксирует эти результаты; оно не меняет
+проверенный исходный код, тесты, зависимости, миграции или конфигурацию запуска.
 
 Репозиторий создан приватным и код отправлен в
 [EminSans1/durable-generation-service](https://github.com/EminSans1/durable-generation-service).
-Существующие репозитории не изменялись. Проверяйте актуальный CI по вкладке Actions:
-во время локальной работы удалённые jobs оставались в очереди без назначенного runner.
+Существующие репозитории не изменялись. Первоначальная очередь GitHub Actions
+обработана; результаты подтверждены при финальном аудите, а не только со слов автора.
 
 Финансовые гарантии относятся к транзакциям PostgreSQL. HTTP delivery может
 повторяться; провайдер должен хранить ключ идемпотентности. Production deployment

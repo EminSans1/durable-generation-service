@@ -17,13 +17,13 @@
 | 7. Повтор внешнего запроса | Один attempt UUID; durable provider PRIMARY KEY | 20 concurrent accepts, restart, повтор после crash |
 | 8. Watchdog | Clock timestamp, PROVIDER_TIMEOUT, ordered state transition | Параллельные watchdog, отсутствующий callback, HTTP smoke |
 | 9. Late completed | Terminal attempts immutable in service, deadline check | После refund и после успеха следующей ноги; race |
-| 10. Compose | db/migrate/api(4)/alpha/beta/worker; health/dependencies | Standalone Compose config прошёл; Docker Engine отсутствует: build/run не подтверждены |
+| 10. Compose | db/migrate/api(4)/alpha/beta/worker; health/dependencies | Job compose: build, up, 54 теста и HTTP smoke завершились успешно на Ubuntu |
 | 10. 4 API workers | Uvicorn --workers 4 | Реальный локальный запуск: 4 PID из HTTP /health |
 | 11. 4 обязательных теста | Concurrent payments/refunds, fallback, late completed | Все присутствуют и выполнены на PostgreSQL |
 | 11. Дополнительные тесты | Validation, HMAC, races, failure/recovery, balance sum | Полный pytest; SQLite отсутствует |
 | 12. README | Русский, Mermaid, гарантии/границы, curl, env, миграции/тесты | Самопроверка документации и ссылок |
 | 13. Git/качество | Этапные коммиты, ignore secrets, type hints, Ruff, CI | git diff --check, Ruff, история и status |
-| 14–15. Весь цикл и отчёт | docs/VERIFICATION.md + итоговый ответ | Честно отделены выполненные проверки и Docker blocker |
+| 14–15. Весь цикл и отчёт | docs/VERIFICATION.md + итоговый ответ | test и compose успешны; локальная Windows-проверка отделена от контейнерной CI-проверки |
 
 Exactly-once относится к финансовым изменениям PostgreSQL. HTTP допускает повторную
 доставку; одну логическую попытку у провайдера обеспечивает его персистентный ключ.
