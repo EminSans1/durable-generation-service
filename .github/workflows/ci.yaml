@@ -33,9 +33,9 @@ jobs:
   compose:
     runs-on: ubuntu-latest
     env:
-      PROVIDER_TIMEOUT: "3"
-      HTTP_TIMEOUT: "0.5"
-      DISPATCH_LEASE: "2"
+      PROVIDER_TIMEOUT: "8"
+      HTTP_TIMEOUT: "2"
+      DISPATCH_LEASE: "4"
       WORKER_POLL: "0.1"
     steps:
       - uses: actions/checkout@v4

@@ -17,7 +17,7 @@
 | 7. Повтор внешнего запроса | Один attempt UUID; durable provider PRIMARY KEY | 20 concurrent accepts, restart, повтор после crash |
 | 8. Watchdog | Clock timestamp, PROVIDER_TIMEOUT, ordered state transition | Параллельные watchdog, отсутствующий callback, HTTP smoke |
 | 9. Late completed | Terminal attempts immutable in service, deadline check | После refund и после успеха следующей ноги; race |
-| 10. Compose | db/migrate/api(4)/alpha/beta/worker; health/dependencies | Docker отсутствует: build/run не подтверждены |
+| 10. Compose | db/migrate/api(4)/alpha/beta/worker; health/dependencies | Standalone Compose config прошёл; Docker Engine отсутствует: build/run не подтверждены |
 | 10. 4 API workers | Uvicorn --workers 4 | Реальный локальный запуск: 4 PID из HTTP /health |
 | 11. 4 обязательных теста | Concurrent payments/refunds, fallback, late completed | Все присутствуют и выполнены на PostgreSQL |
 | 11. Дополнительные тесты | Validation, HMAC, races, failure/recovery, balance sum | Полный pytest; SQLite отсутствует |

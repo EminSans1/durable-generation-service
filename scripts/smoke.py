@@ -17,7 +17,9 @@ async def smoke() -> dict:
     api_url = os.environ.get("SMOKE_API_URL", "http://127.0.0.1:8000")
     alpha_url = os.environ.get("SMOKE_ALPHA_URL", "http://127.0.0.1:8001")
     beta_url = os.environ.get("SMOKE_BETA_URL", "http://127.0.0.1:8002")
-    async with httpx.AsyncClient(limits=httpx.Limits(max_keepalive_connections=0)) as client:
+    async with httpx.AsyncClient(
+        timeout=30, limits=httpx.Limits(max_keepalive_connections=0)
+    ) as client:
         pids = set()
         for _ in range(30):
             responses = await asyncio.gather(*(client.get(api_url + "/health") for _ in range(8)))

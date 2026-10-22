@@ -1,3 +1,5 @@
+name: durable-generation
+
 x-service: &service
   build: .
   image: durable-generation:local
