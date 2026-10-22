@@ -59,13 +59,17 @@ def upgrade():
         CREATE TRIGGER ledger_apply AFTER INSERT ON ledger
         FOR EACH ROW EXECUTE FUNCTION apply_ledger_amount()
     """)
-    op.execute("INSERT INTO models(slug, cost) VALUES ('image-fast', 2), ('video-long', 25)")
+    op.execute("""
+        INSERT INTO models(slug, cost) VALUES ('image-fast', 2), ('video-long', 25)
+        ON CONFLICT DO NOTHING
+    """)
     op.execute("""
         INSERT INTO legs(model_slug, position, provider, max_ref_images, skip_on_moderation)
         VALUES ('image-fast',1,'alpha',4,false), ('image-fast',2,'beta',10,false),
                ('video-long',1,'beta',2,false), ('video-long',2,'alpha',1,true)
+        ON CONFLICT DO NOTHING
     """)
-    op.execute("INSERT INTO users(id) VALUES (1)")
+    op.execute("INSERT INTO users(id) VALUES (1) ON CONFLICT DO NOTHING")
 
 
 def downgrade():

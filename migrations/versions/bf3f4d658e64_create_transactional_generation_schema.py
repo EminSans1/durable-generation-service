@@ -89,7 +89,8 @@ def upgrade():
         ),
         sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
         sa.CheckConstraint(
-            "(status = 'active' AND finished_at IS NULL) OR (status <> 'active' AND finished_at IS NOT NULL)",
+            "(status = 'active' AND finished_at IS NULL) OR "
+            "(status <> 'active' AND finished_at IS NOT NULL)",
             name="task_terminal_time",
         ),
         sa.CheckConstraint("status IN ('active','completed','failed')", name="task_status"),
@@ -149,7 +150,9 @@ def upgrade():
             nullable=False,
         ),
         sa.CheckConstraint(
-            "(kind = 'payment' AND amount > 0 AND payment_id IS NOT NULL AND task_id IS NULL) OR (kind = 'debit' AND amount < 0 AND task_id IS NOT NULL AND payment_id IS NULL) OR (kind = 'refund' AND amount > 0 AND task_id IS NOT NULL AND payment_id IS NULL)",
+            "(kind = 'payment' AND amount > 0 AND payment_id IS NOT NULL AND task_id IS NULL) OR "
+            "(kind = 'debit' AND amount < 0 AND task_id IS NOT NULL AND payment_id IS NULL) OR "
+            "(kind = 'refund' AND amount > 0 AND task_id IS NOT NULL AND payment_id IS NULL)",
             name="ledger_shape",
         ),
         sa.ForeignKeyConstraint(

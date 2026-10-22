@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import func, select, update
@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 OPEN_ATTEMPTS = ("queued", "submitted")
 
 
-async def db_now(session: AsyncSession):
+async def db_now(session: AsyncSession) -> datetime:
     return await session.scalar(select(func.clock_timestamp()))
 
 
@@ -106,7 +106,9 @@ async def credit_payment(session: AsyncSession, data: PaymentEvent) -> bool:
     return inserted is not None
 
 
-async def locked_attempt(session: AsyncSession, attempt_id: uuid.UUID):
+async def locked_attempt(
+    session: AsyncSession, attempt_id: uuid.UUID
+) -> tuple[Task, Attempt] | None:
     identity = (
         await session.execute(
             select(Attempt.task_id, Task.user_id)
