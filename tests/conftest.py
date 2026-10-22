@@ -1,4 +1,5 @@
 import os
+from contextlib import AsyncExitStack
 
 import httpx
 import pytest
@@ -6,6 +7,7 @@ from sqlalchemy import text
 
 from app.api import create_app
 from app.config import Settings
+from app.provider import create_provider
 
 
 @pytest.fixture
@@ -37,3 +39,19 @@ async def client(application):
         transport=httpx.ASGITransport(app=application), base_url="http://test"
     ) as client:
         yield client
+
+
+@pytest.fixture
+async def providers(application, settings):
+    async with AsyncExitStack() as stack:
+        clients = {}
+        configs = {}
+        for name in ("alpha", "beta"):
+            config = settings.model_copy(update={"provider_name": name})
+            app = create_provider(config, background=False)
+            await stack.enter_async_context(app.router.lifespan_context(app))
+            clients[name] = await stack.enter_async_context(
+                httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=f"http://{name}")
+            )
+            configs[name] = config
+        yield clients, configs
