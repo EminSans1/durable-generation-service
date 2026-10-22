@@ -1,0 +1,52 @@
+name: PostgreSQL integration checks
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: generation
+          POSTGRES_PASSWORD: generation
+          POSTGRES_DB: generation_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U generation -d generation_test"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      DATABASE_URL: postgresql+asyncpg://generation:generation@127.0.0.1:5432/generation_test
+      TEST_DATABASE_URL: postgresql+asyncpg://generation:generation@127.0.0.1:5432/generation_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.7"
+      - run: uv sync --frozen
+      - run: uv run alembic upgrade head
+      - run: uv run alembic check
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest -q
+      - run: uv run python scripts/run_local_stack.py
+
+  compose:
+    runs-on: ubuntu-latest
+    env:
+      PROVIDER_TIMEOUT: "3"
+      HTTP_TIMEOUT: "0.5"
+      DISPATCH_LEASE: "2"
+      WORKER_POLL: "0.1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.7"
+      - run: docker compose up --build --wait --wait-timeout 120
+      - run: docker compose --profile test run --rm tests
+      - run: uv sync --frozen
+      - run: uv run python -m scripts.smoke
+      - if: always()
+        run: docker compose logs --no-color
+      - if: always()
+        run: docker compose down

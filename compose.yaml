@@ -1,0 +1,107 @@
+x-service: &service
+  build: .
+  image: durable-generation:local
+  restart: unless-stopped
+  environment: &environment
+    DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-generation}:${POSTGRES_PASSWORD:-generation}@db:5432/${POSTGRES_DB:-generation}
+    ALPHA_URL: http://alpha:8001
+    BETA_URL: http://beta:8001
+    CALLBACK_BASE_URL: http://api:8000
+    ALPHA_SECRET: ${ALPHA_SECRET:-local-alpha-secret}
+    BETA_SECRET: ${BETA_SECRET:-local-beta-secret}
+    PAYMENT_SECRET: ${PAYMENT_SECRET:-local-payment-secret}
+    PROVIDER_API_KEY: ${PROVIDER_API_KEY:-local-provider-api-key}
+    PROVIDER_TIMEOUT: ${PROVIDER_TIMEOUT:-60}
+    HTTP_TIMEOUT: ${HTTP_TIMEOUT:-5}
+    DISPATCH_LEASE: ${DISPATCH_LEASE:-15}
+    WORKER_POLL: ${WORKER_POLL:-0.25}
+    PROVIDER_DELAY_MIN: ${PROVIDER_DELAY_MIN:-2}
+    PROVIDER_DELAY_MAX: ${PROVIDER_DELAY_MAX:-20}
+    LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-generation}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-generation}
+      POSTGRES_DB: ${POSTGRES_DB:-generation}
+    ports: ["127.0.0.1:5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-test-db.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  migrate:
+    <<: *service
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    <<: *service
+    ports: ["127.0.0.1:8000:8000"]
+    command: ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  alpha:
+    <<: *service
+    environment:
+      <<: *environment
+      PROVIDER_NAME: alpha
+    ports: ["127.0.0.1:8001:8001"]
+    command: ["uvicorn", "app.provider:app", "--host", "0.0.0.0", "--port", "8001"]
+    healthcheck: &provider-health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  beta:
+    <<: *service
+    environment:
+      <<: *environment
+      PROVIDER_NAME: beta
+    ports: ["127.0.0.1:8002:8001"]
+    command: ["uvicorn", "app.provider:app", "--host", "0.0.0.0", "--port", "8001"]
+    healthcheck: *provider-health
+
+  worker:
+    <<: *service
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+      alpha:
+        condition: service_healthy
+      beta:
+        condition: service_healthy
+
+  tests:
+    <<: *service
+    profiles: ["test"]
+    restart: "no"
+    environment:
+      <<: *environment
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-generation}:${POSTGRES_PASSWORD:-generation}@db:5432/generation_test
+      TEST_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-generation}:${POSTGRES_PASSWORD:-generation}@db:5432/generation_test
+    command: ["sh", "-c", "uv sync --frozen && alembic upgrade head && ruff check . && ruff format --check . && pytest -q"]
+
+volumes:
+  pgdata:
